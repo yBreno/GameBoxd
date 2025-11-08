@@ -37,4 +37,4 @@ conexao = criar_tabela()
 cursor = conexao.cursor()
 adicionar()
 printar()
-print("Teste")
+print("Teste") #
