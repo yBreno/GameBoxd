@@ -43,7 +43,7 @@ def adicionar():
 
         nova_nota = (str(nota_antiga) + ", " + str(nota)).strip(", ")
         novo_comentario = (comentario_antigo + " , " + comentario).strip(" , ")
-        if promocao ==  "N": # So para sempre deixar o valor sem promoção 
+        if promocao ==  "N":  
             cursor.execute("UPDATE banco SET nota = ?, comentario = ?, onde_baixar = ?, valor = ? WHERE id = ?",
                         (nova_nota, novo_comentario, onde, valor, id_jogo))
             conexao.commit()
