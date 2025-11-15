@@ -67,6 +67,7 @@ def mostrar():
         print(jogo)
 
 
+mostrar()
 adicionar()
 mostrar()
 
