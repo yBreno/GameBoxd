@@ -3,7 +3,7 @@ services:
     name: gameboxd
     env: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn app:app"
+    startCommand: "gunicorn GameBoxd:app"
     envVars:
       - key: RAWG_API_KEY
         sync: false
