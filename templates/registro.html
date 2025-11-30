@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>Registro | GameBoxd</title>
+</head>
+<body>
+
+    <main class="form-container"> 
+        <form action="{{ url_for('registro') }}" method="POST" class="form-card">
+            
+            <header class="form-header"> 
+                <span class="icon" aria-label="Controlador de videogame">🕹️</span>
+                <h1>GameBoxd</h1> </header>
+
+            <h2 class="form-action-title">CRIE SUA CONTA</h2> 
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-box">
+                        {% for category, message in messages %}
+                            <p class="flash-message flash-{{ category }}" role="alert">{{ message }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <div class="form-group">
+                <label for="username">USUÁRIO</label> 
+                <input type="text" id="username" name="username" required placeholder="Escolha o seu usuário"autocomplete="new-username"> 
+                </div>
+
+            <div class="form-group">
+                <label for="senha">SENHA</label> <input type="password" id="senha" name="senha" required placeholder="Escolha a sua senha" autocomplete="new-password"> 
+            </div>
+            <button type="submit" class="btn big submit-btn">CRIAR CONTA</button>
+
+            <footer class="form-footer">
+                <p class="form-info">
+                    Já tem conta?
+                    <a href="{{ url_for('login') }}" class="link-secundario">ENTRAR</a>
+                </p>
+            </footer>
+        </form>
+    </main>
+</body>
+</html>
