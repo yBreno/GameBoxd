@@ -334,7 +334,7 @@ def logout():
 
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
-    if request.method == 'POST']:
+    if request.method == 'POST':
         username = request.form['username'].lower()
         senha = request.form['senha']
         conexao = get_db()
