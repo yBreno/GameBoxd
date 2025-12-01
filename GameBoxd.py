@@ -15,6 +15,12 @@ RAWG_API_KEY = os.environ.get('RAWG_API_KEY')
 _rawg_cache = {}  
 _RAWG_CACHE_TTL = 60 * 60  
 
+
+def fix_url(url):
+    if not url:
+        return None
+    return url.replace("http://", "https://")
+
 def _cache_get(key):
     item = _rawg_cache.get(key)
     if not item:
@@ -38,9 +44,7 @@ def rawg_search(query, limit=6):
     try:
         q = quote_plus(query)
         url = f"https://api.rawg.io/api/games?search={q}&page_size={limit}&key={RAWG_API_KEY}"
-        app.logger.debug(f"RAWG search URL: {url}")
         r = requests.get(url, timeout=5)
-        app.logger.debug(f"RAWG search status: {r.status_code} for query={query}")
         r.raise_for_status()
         data = r.json()
         results = []
@@ -48,12 +52,11 @@ def rawg_search(query, limit=6):
             results.append({
                 'id': item.get('id'),
                 'name': item.get('name'),
-                'cover': item.get('background_image')
+                'cover': fix_url(item.get('background_image'))   # ✔ AQUI A MUDANÇA
             })
         _cache_set(key, results)
         return results
     except Exception:
-        app.logger.exception(f"RAWG search failed for query={query}")
         return []
 
 def rawg_details_by_id(gid):
@@ -65,19 +68,19 @@ def rawg_details_by_id(gid):
         return cached
     try:
         details_url = f"https://api.rawg.io/api/games/{gid}?key={RAWG_API_KEY}"
-        app.logger.debug(f"RAWG details URL: {details_url}")
         r = requests.get(details_url, timeout=6)
-        app.logger.debug(f"RAWG details status: {r.status_code} for id={gid}")
         r.raise_for_status()
         details = r.json()
+
         stores = []
         for s in details.get('stores', []):
             store_name = s.get('store', {}).get('name')
             store_url = s.get('url')
             if store_name and store_url:
                 stores.append({'name': store_name, 'url': store_url})
+
         out = {
-            'cover': details.get('background_image'),
+            'cover': fix_url(details.get('background_image')),  # ✔ AQUI TAMBÉM
             'rating': details.get('rating'),
             'stores': stores,
             'metacritic': details.get('metacritic'),
@@ -86,7 +89,6 @@ def rawg_details_by_id(gid):
         _cache_set(key, out)
         return out
     except Exception:
-        app.logger.exception(f"RAWG details failed for id={gid}")
         return None
 
 def get_db():
@@ -151,28 +153,26 @@ def index():
         for jogo_normalizado, nota in raw_atividade:
             
             rawg_data = None
+            gid = None
             try:
                 results = rawg_search(jogo_normalizado, limit=1) 
                 if results:
                     gid = results[0].get('id')
                     rawg_data = rawg_details_by_id(gid)
             except Exception:
-                app.logger.exception(f"Erro ao buscar detalhes RAWG para {jogo_normalizado}")
                 rawg_data = None
 
-            jogo_display_name = rawg_data.get('name') if rawg_data and rawg_data.get('name') else jogo_normalizado.title()
+            jogo_display_name = rawg_data.get('name') if rawg_data else jogo_normalizado.title()
             
-            cover_url = rawg_data.get('cover') if rawg_data and rawg_data.get('cover') else url_for('static', filename='default_cover.svg')
-            community_rating = rawg_data.get('rating') if rawg_data else None
+            cover_url = rawg_data.get('cover') if rawg_data else url_for('static', filename='default_cover.svg')
 
             atividade.append({
                 'name': jogo_display_name,
                 'nota': nota,
-                'cover': cover_url,
-                'rating': community_rating,
-                'id': gid if rawg_data else None 
+                'cover': fix_url(cover_url),   # ✔ GARANTIA EXTRA
+                'rating': rawg_data.get('rating') if rawg_data else None,
+                'id': gid
             })
-            app.logger.info(f"Atividade - jogo={jogo_display_name!r} cover_used={cover_url}")
 
     cursor.execute("""
         SELECT jogos.nome_do_jogo, COUNT(avaliacoes.id) AS total, AVG(avaliacoes.nota) as media_nota
@@ -187,27 +187,26 @@ def index():
     populares = []
     for jogo_normalizado, total, media_nota in raw_populares:
         rawg_data = None
+        gid = None
         try:
             results = rawg_search(jogo_normalizado, limit=1) 
             if results:
                 gid = results[0].get('id')
                 rawg_data = rawg_details_by_id(gid)
         except Exception:
-            app.logger.exception(f"Erro ao buscar detalhes RAWG para populares: {jogo_normalizado}")
             rawg_data = None
             
-        jogo_display_name = rawg_data.get('name') if rawg_data and rawg_data.get('name') else jogo_normalizado.title()
+        jogo_display_name = rawg_data.get('name') if rawg_data else jogo_normalizado.title()
 
-        cover_url = rawg_data.get('cover') if rawg_data and rawg_data.get('cover') else url_for('static', filename='default_cover.svg')
-        
+        cover_url = rawg_data.get('cover') if rawg_data else url_for('static', filename='default_cover.svg')
+
         populares.append({
             'name': jogo_display_name, 
             'total': total, 
-            'cover': cover_url,
+            'cover': fix_url(cover_url),   # ✔ GARANTIA EXTRA
             'avg_rating': f"{media_nota:.1f}" if media_nota else 'N/A', 
-            'id': gid if rawg_data else None
+            'id': gid
         })
-        app.logger.info(f"Popular - jogo={jogo_display_name!r} cover_used={cover_url}")
 
     return render_template("index.html", atividade=atividade, populares=populares)
 
@@ -243,13 +242,13 @@ def dashboard():
 
         default_cover = url_for('static', filename='default_cover.svg')
         
-        jogo_display_name = rawg_info.get('name') if rawg_info and rawg_info.get('name') else jogo_normalizado.title()
+        jogo_display_name = rawg_info.get('name') if rawg_info else jogo_normalizado.title()
 
         rawg_dict = {
-            'cover': (rawg_info.get('cover') if rawg_info and rawg_info.get('cover') else default_cover),
-            'rating': (rawg_info.get('rating') if rawg_info and rawg_info.get('rating') else None),
-            'stores': (rawg_info.get('stores') if rawg_info and rawg_info.get('stores') else []),
-            'metacritic': (rawg_info.get('metacritic') if rawg_info and rawg_info.get('metacritic') else None)
+            'cover': fix_url(rawg_info.get('cover') if rawg_info else default_cover),  
+            'rating': rawg_info.get('rating') if rawg_info else None,
+            'stores': rawg_info.get('stores') if rawg_info else [],
+            'metacritic': rawg_info.get('metacritic') if rawg_info else None
         }
 
         enriched.append({
@@ -335,7 +334,7 @@ def logout():
 
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
-    if request.method == 'POST':
+    if request.method == 'POST']:
         username = request.form['username'].lower()
         senha = request.form['senha']
         conexao = get_db()
