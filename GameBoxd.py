@@ -18,19 +18,19 @@ _RAWG_CACHE_TTL = 60 * 60
 
 #aqui eh deus e muito cafe, (api do rawg pra pegar as imagens e colcoar os nomes, tambem colocar em https)
 def fix_url(url):
-   def fix_url(url):
     if not url:
         return None
 
-   
+    # Se já vier com http/https
     if url.startswith("http://") or url.startswith("https://"):
         return url.replace("http://", "https://")
 
-   
+    # Se vier só o caminho /media
     if url.startswith("/media"):
         return "https://media.rawg.io" + url
 
     return url
+
 
 
 def _cache_get(key):
