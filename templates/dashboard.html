@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header class="navbar">
+    <div class="logo logo-area">
+        <span class="icon">🕹️</span>
+        <a href="/" class="logo-text">GameBoxd</a>
+    </div> 
+    <nav class="menu">
+        <a href="/avaliar" class="btn btn-sm">+ Avaliar Jogo</a> 
+        <a href="/logout" class="btn btn-sm">Sair</a>
+    </nav>
+</header>
+
+<div class="dashboard-container">
+
+    <aside class="dashboard-sidebar">
+        <div class="sidebar-user">
+            <div class="user-avatar">
+                <img src="{{ url_for('static', filename='Icon Menine.png') }}" alt="Avatar" class="avatar-img">
+            </div>
+            <h2>{{ username }}</h2>
+            <p>Avaliador de Jogos</p>
+        </div>
+        
+        <div class="sidebar-stats">
+            <div class="stat-item">
+                <span class="stat-label">Total de Avaliações</span>
+                <span class="stat-value">{{ avaliacoes|length }}</span>
+            </div>
+            
+            <div class="stat-item">
+                <span class="stat-label">Nota Média</span>
+                <span class="stat-value">
+                    {% if avaliacoes %}
+                        {% set notas = avaliacoes|map(attribute='nota')|map('int')|list %}
+                        {% set media = notas|sum / notas|length %}
+                        {{ "%.1f"|format(media) }}
+                    {% else %}
+                        0.0
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        <a href="/avaliar" class="btn add-btn big" style="width: 100%; text-align: center;">
+            + Avaliar Novo Jogo
+        </a>
+    </aside>
+
+    <main class="dashboard-main">
+
+        <div class="dashboard-header">
+            <h1 class="titulo-pagina">Suas Avaliações</h1>
+        </div>
+
+        {% if not avaliacoes %}
+            <p class="vazio">
+                Você ainda não avaliou nenhum jogo. Comece
+                <a href="/avaliar" style="color: var(--accent); font-weight: 600;">aqui</a>.
+            </p>
+        {% else %}
+            <div class="cards-grid">
+
+                {% for aval in avaliacoes %}
+                <div class="review-card">
+
+                    <div class="card-media">
+                        {% set cover_url = aval.rawg.cover if aval.rawg and aval.rawg.cover else url_for('static', filename='default_cover.svg') %}
+                        <img class="cover-img"
+                             src="{{ cover_url }}"
+                             alt="Capa do Jogo: {{ aval.name }}"
+                             onerror="this.onerror=null; this.src='{{ url_for('static', filename='default_cover.svg') }}';">
+
+                        {% if aval.rawg and aval.rawg.rating %}
+                        <div class="rating-badge">
+                            <span class="rating-num">RAWG: {{ aval.rawg.rating }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <h3 class="card-title">{{ aval.name }}</h3>
+
+                    <p class="card-nota rate">
+                        Sua Nota: {{ aval.nota }}★
+                    </p>
+
+                    {% if aval.comentario %}
+                        <p class="card-coment">
+                            "{{ aval.comentario|truncate(80, True) }}"
+                        </p>
+                    {% endif %}
+
+                    <div class="card-meta">
+                        {% if aval.valor %}
+                            <span class="card-valor">
+                                <strong>Valor:</strong> {{ aval.valor }}
+                            </span>
+                        {% endif %}
+                        {% if aval.onde %}
+                            <span class="card-onde">
+                                <strong>Onde:</strong> {{ aval.onde }}
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    {% if aval.rawg and aval.rawg.stores %}
+                        <div class="store-buttons">
+                            {% for s in aval.rawg.stores[:3] %}
+                                <a class="store-btn"
+                                   href="{{ s.url }}"
+                                   target="_blank"
+                                   rel="noopener noreferrer">
+                                    {{ s.name }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <!-- BOTÕES EDITAR E EXCLUIR -->
+                    <div class="card-actions">
+
+                        <a href="{{ url_for('editar_avaliacao', avaliacao_id=aval.id) }}"
+                           class="btn-edit">
+                            ✏️ Editar
+                        </a>
+
+                        <form action="{{ url_for('deletar_avaliacao', avaliacao_id=aval.id) }}"
+                              method="POST"
+                              class="delete-form"
+                              onsubmit="return confirm('Tem certeza que deseja excluir essa avaliação?');">
+
+                            <button type="submit" class="btn-delete">
+                                🗑️ Excluir
+                            </button>
+                        </form>
+
+                    </div>
+
+                </div>
+                {% endfor %}
+
+            </div>
+        {% endif %}
+
+    </main>
+</div>
+
+</body>
+</html>

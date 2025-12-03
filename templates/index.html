@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>Home</title>
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="logo logo-area"> <span class="icon" aria-hidden="true">🕹️</span> 
+            <a href="/" class="logo-text">GameBoxd</a>
+        </div> 
+        <nav class="menu" aria-label="Navegação principal">
+            {% if session.get('username') %}
+                <a href="/dashboard">Dashboard</a>
+                <a href="/logout" class="btn btn-sm">Sair</a>
+            {% else %}
+                <a href="/login" class="btn btn-sm">Entrar</a> 
+            {% endif %}
+        </nav>
+    </header>
+
+    <div class="dashboard-layout">
+
+        <aside class="sidebar" role="complementary">
+            <div class="sidebar-profile">
+                <div class="profile-avatar" aria-label="Avatar do usuário">
+                    <img src="{{ url_for('static', filename='Icon Menine.png') }}" alt="Avatar" class="avatar-img">
+                </div>
+                <h2>
+                    {% if session.get('username') %}
+                        {{ session.get('username') }}
+                    {% else %}
+                        Visitante
+                    {% endif %}
+                </h2>
+
+                {% if session.get('username') %}
+                    <p>Bem-vindo de volta!</p>
+                {% else %}
+                    <p>Crie uma conta para avaliar jogos e montar listas.</p>
+                {% endif %}
+            </div>
+            
+            {% if session.get('username') %}
+            <div class="buttons">
+                <a href="{{ url_for('avaliar') }}" class="btn big add-btn btn-primary">🎮 Avaliar Novo Jogo</a>
+            </div>
+            {% endif %}
+            
+            {% if not session.get('username') %}
+                <div class="buttons">
+                    <a href="{{ url_for('dashboard') }}" class="btn big btn-secondary">Criar Conta</a>
+                </div>
+            {% endif %}
+
+        </aside>
+
+        <main class="main-content" role="main"> 
+            
+            <div class="welcome-card">
+                <h1>Bem-vindo ao GameBoxd</h1>
+                <p>Bem-vindo(a) à GameBoxd, a comunidade definitiva para quem vive e respira jogos!</p>
+                <p>Não importa se você é um speedrunner lendário ou um explorador de mundos indie, este é o seu espaço para registrar, descobrir e celebrar a cultura gamer.</p>
+            </div>
+
+            {% if session.get('username') %}
+            <section class="section">
+                <h2>Atividade Recente</h2>
+                
+                {% if atividade %}
+                    <div class="recent-cards">
+                        {% for a in atividade %}
+                            <a href="{{ url_for('index') }}" class="game-card"> 
+                                <div class="card-media">
+                                    {% if a.cover %}
+                                        <img class="cover-img" src="{{ a.cover }}" alt="Capa do jogo {{ a.name }}">
+                                    {% else %}
+                                        <img class="cover-img" src="https://via.placeholder.com/420x220?text=Sem+Capa" alt="Sem Capa Disponível">
+                                    {% endif %}
+
+                                    <div class="rating-badge">
+                                        <span class="rating-num">
+                                            {{ a.rating if a.rating is not none else 'N/A' }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <h4 class="game-card-title">{{ a.name }}</h4> 
+                                <p class="rate">Sua nota: {{ a.nota }}★</p>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="welcome-incentive-card">
+                        <p>🎉 Parece que você é novo por aqui! Comece a acompanhar sua jornada gamer avaliando seu primeiro jogo.</p>
+                        <a href="{{ url_for('avaliar') }}" class="btn big btn-primary">Avaliar Agora</a>
+                    </div>
+                {% endif %}
+
+            </section>
+            {% endif %}
+
+            <section class="section">
+                <h2>Jogos Populares</h2>
+
+                <div class="popular-grid">
+                    {% if populares %}
+                        {% for p in populares %}
+                            <a href="{{ url_for('index') }}" class="popular-card">
+                                <div class="card-media">
+                                    {% if p.cover %}
+                                        <img class="cover-img" src="{{ p.cover }}" alt="Capa do jogo {{ p.name }}">
+                                    {% else %}
+                                        <img class="cover-img" src="https://via.placeholder.com/420x220?text=Sem+Capa" alt="Sem Capa Disponível">
+                                    {% endif %}
+                                </div>
+                                <h4 class="title">{{ p.name }}</h4> 
+                                <p>{{ p.total }} avaliações</p> 
+                                <p class="avg-rate">Média: <span class="rate-num">{{ p.avg_rating }}</span> ★</p>
+                            </a>
+                        {% endfor %}
+                    {% else %}
+                        <p class="vazio">Nenhum jogo encontrado.</p>
+                    {% endif %}
+                </div>
+            </section>
+            </main>
+
+    </div>
+
+</body>
+</html>
