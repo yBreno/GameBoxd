@@ -12,26 +12,8 @@ app = Flask(__name__)
 app.secret_key = 'abacate'
 
 RAWG_API_KEY = os.environ.get('RAWG_API_KEY')
-_rawg_cache = {}
-_RAWG_CACHE_TTL = 60 * 60
-
-
-#aqui eh deus e muito cafe, (api do rawg pra pegar as imagens e colcoar os nomes, tambem colocar em https)
-def fix_url(url):
-    if not url:
-        return None
-
-    # Se já vier com http/https
-    if url.startswith("http://") or url.startswith("https://"):
-        return url.replace("http://", "https://")
-
-    # Se vier só o caminho /media
-    if url.startswith("/media"):
-        return "https://media.rawg.io" + url
-
-    return url
-
-
+_rawg_cache = {}  
+_RAWG_CACHE_TTL = 60 * 60  
 
 def _cache_get(key):
     item = _rawg_cache.get(key)
@@ -43,313 +25,353 @@ def _cache_get(key):
         return None
     return val
 
-
 def _cache_set(key, val):
     _rawg_cache[key] = (time.time(), val)
-
 
 def rawg_search(query, limit=6):
     if not RAWG_API_KEY or not query:
         return []
-
     key = f"search:{query.lower()}:{limit}"
     cached = _cache_get(key)
     if cached is not None:
         return cached
-
     try:
         q = quote_plus(query)
         url = f"https://api.rawg.io/api/games?search={q}&page_size={limit}&key={RAWG_API_KEY}"
+        app.logger.debug(f"RAWG search URL: {url}")
         r = requests.get(url, timeout=5)
+        app.logger.debug(f"RAWG search status: {r.status_code} for query={query}")
         r.raise_for_status()
         data = r.json()
-
         results = []
-        for item in data.get('results', []):
+        for item in (data.get('results') or []):
             results.append({
                 'id': item.get('id'),
                 'name': item.get('name'),
-                'cover': fix_url(item.get('background_image'))
+                'cover': item.get('background_image')
             })
-
         _cache_set(key, results)
         return results
     except Exception:
+        app.logger.exception(f"RAWG search failed for query={query}")
         return []
-
 
 def rawg_details_by_id(gid):
     if not RAWG_API_KEY or not gid:
         return None
-
     key = f"details:{gid}"
     cached = _cache_get(key)
     if cached is not None:
         return cached
-
     try:
-        url = f"https://api.rawg.io/api/games/{gid}?key={RAWG_API_KEY}"
-        r = requests.get(url, timeout=6)
+        details_url = f"https://api.rawg.io/api/games/{gid}?key={RAWG_API_KEY}"
+        app.logger.debug(f"RAWG details URL: {details_url}")
+        r = requests.get(details_url, timeout=6)
+        app.logger.debug(f"RAWG details status: {r.status_code} for id={gid}")
         r.raise_for_status()
         details = r.json()
-
         stores = []
         for s in details.get('stores', []):
             store_name = s.get('store', {}).get('name')
             store_url = s.get('url')
             if store_name and store_url:
                 stores.append({'name': store_name, 'url': store_url})
-
         out = {
-            'cover': fix_url(details.get('background_image')),
+            'cover': details.get('background_image'),
             'rating': details.get('rating'),
             'stores': stores,
             'metacritic': details.get('metacritic'),
             'name': details.get('name')
         }
-
         _cache_set(key, out)
         return out
     except Exception:
+        app.logger.exception(f"RAWG details failed for id={gid}")
         return None
 
-
-#conectar com o banco
 def get_db():
     return sqlite3.connect("banco.db")
 
-
 def init_db():
     if not os.path.exists("banco.db"):
-        db = get_db()
-        c = db.cursor()
+        conexao = get_db()
+        cursor = conexao.cursor()
 
-        c.execute("""CREATE TABLE usuarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            senha TEXT NOT NULL
-        )""")
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                senha TEXT NOT NULL
+            )
+        """)
 
-        c.execute("""CREATE TABLE jogos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome_do_jogo TEXT UNIQUE NOT NULL
-        )""")
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS jogos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome_do_jogo TEXT NOT NULL UNIQUE
+            )
+        """)
 
-        c.execute("""CREATE TABLE avaliacoes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            usuario_id INTEGER,
-            jogo_id INTEGER,
-            nota REAL,
-            comentario TEXT,
-            onde_baixar TEXT,
-            valor TEXT,
-            UNIQUE(usuario_id, jogo_id)
-        )""")
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS avaliacoes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id INTEGER NOT NULL,
+                jogo_id INTEGER NOT NULL,
+                nota REAL,
+                comentario TEXT,
+                onde_baixar TEXT,
+                valor TEXT,
+                UNIQUE(usuario_id, jogo_id),
+                FOREIGN KEY(usuario_id) REFERENCES usuarios(id),
+                FOREIGN KEY(jogo_id) REFERENCES jogos(id)
+            )
+        """)
 
-        db.commit()
-
+        conexao.commit()
 
 init_db()
 
-
-#tela principal
 @app.route('/')
 def index():
-    return render_template("index.html")
+    conexao = get_db()
+    cursor = conexao.cursor()
 
-#tela inicial
+    atividade = []
+    if session.get('username'):
+        cursor.execute("""
+            SELECT jogos.nome_do_jogo, avaliacoes.nota
+            FROM avaliacoes
+            JOIN jogos ON jogos.id = avaliacoes.jogo_id
+            WHERE avaliacoes.usuario_id = ?
+            ORDER BY avaliacoes.id DESC
+            LIMIT 5
+        """, (session.get('user_id'),)) 
+        raw_atividade = cursor.fetchall()
+
+        for jogo_normalizado, nota in raw_atividade:
+            
+            rawg_data = None
+            try:
+                results = rawg_search(jogo_normalizado, limit=1) 
+                if results:
+                    gid = results[0].get('id')
+                    rawg_data = rawg_details_by_id(gid)
+            except Exception:
+                app.logger.exception(f"Erro ao buscar detalhes RAWG para {jogo_normalizado}")
+                rawg_data = None
+
+            jogo_display_name = rawg_data.get('name') if rawg_data and rawg_data.get('name') else jogo_normalizado.title()
+            
+            cover_url = rawg_data.get('cover') if rawg_data and rawg_data.get('cover') else url_for('static', filename='default_cover.svg')
+            community_rating = rawg_data.get('rating') if rawg_data else None
+
+            atividade.append({
+                'name': jogo_display_name,
+                'nota': nota,
+                'cover': cover_url,
+                'rating': community_rating,
+                'id': gid if rawg_data else None 
+            })
+            app.logger.info(f"Atividade - jogo={jogo_display_name!r} cover_used={cover_url}")
+
+    cursor.execute("""
+        SELECT jogos.nome_do_jogo, COUNT(avaliacoes.id) AS total, AVG(avaliacoes.nota) as media_nota
+        FROM jogos
+        LEFT JOIN avaliacoes ON jogos.id = avaliacoes.jogo_id
+        GROUP BY jogos.id
+        ORDER BY total DESC
+        LIMIT 4
+    """)
+    raw_populares = cursor.fetchall()
+
+    populares = []
+    for jogo_normalizado, total, media_nota in raw_populares:
+        rawg_data = None
+        try:
+            results = rawg_search(jogo_normalizado, limit=1) 
+            if results:
+                gid = results[0].get('id')
+                rawg_data = rawg_details_by_id(gid)
+        except Exception:
+            app.logger.exception(f"Erro ao buscar detalhes RAWG para populares: {jogo_normalizado}")
+            rawg_data = None
+            
+        jogo_display_name = rawg_data.get('name') if rawg_data and rawg_data.get('name') else jogo_normalizado.title()
+
+        cover_url = rawg_data.get('cover') if rawg_data and rawg_data.get('cover') else url_for('static', filename='default_cover.svg')
+        
+        populares.append({
+            'name': jogo_display_name, 
+            'total': total, 
+            'cover': cover_url,
+            'avg_rating': f"{media_nota:.1f}" if media_nota else 'N/A', 
+            'id': gid if rawg_data else None
+        })
+        app.logger.info(f"Popular - jogo={jogo_display_name!r} cover_used={cover_url}")
+
+    return render_template("index.html", atividade=atividade, populares=populares)
+
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    db = get_db()
-    c = db.cursor()
+    user_id = session['user_id']
+    conexao = get_db()
+    cursor = conexao.cursor()
 
-    c.execute("""
-        SELECT avaliacoes.id, jogos.nome_do_jogo, avaliacoes.nota,
-               avaliacoes.comentario, avaliacoes.onde_baixar, avaliacoes.valor
+    cursor.execute("""
+        SELECT jogos.nome_do_jogo, avaliacoes.nota, avaliacoes.comentario,
+               avaliacoes.onde_baixar, avaliacoes.valor
         FROM avaliacoes
         JOIN jogos ON jogos.id = avaliacoes.jogo_id
-        WHERE avaliacoes.usuario_id = ?
-    """, (session['user_id'],))
+        WHERE usuario_id = ?
+    """, (user_id,))
 
-    dados = c.fetchall()
-    avaliacoes = []
+    dados = cursor.fetchall()
 
-    for a in dados:
+    enriched = []
+    for jogo_normalizado, nota, comentario, onde, valor in dados:
         rawg_info = None
         try:
-            r = rawg_search(a[1], 1)
-            if r:
-                rawg_info = rawg_details_by_id(r[0]['id'])
-        except:
+            results = rawg_search(jogo_normalizado, limit=1)
+            if results:
+                gid = results[0].get('id')
+                rawg_info = rawg_details_by_id(gid)
+        except Exception:
             rawg_info = None
 
-        avaliacoes.append({
-            'id': a[0],
-            'name': a[1].title(),
-            'nota': a[2],
-            'comentario': a[3],
-            'onde': a[4],
-            'valor': a[5],
-            'rawg': rawg_info
+        default_cover = url_for('static', filename='default_cover.svg')
+        
+        jogo_display_name = rawg_info.get('name') if rawg_info and rawg_info.get('name') else jogo_normalizado.title()
+
+        rawg_dict = {
+            'cover': (rawg_info.get('cover') if rawg_info and rawg_info.get('cover') else default_cover),
+            'rating': (rawg_info.get('rating') if rawg_info and rawg_info.get('rating') else None),
+            'stores': (rawg_info.get('stores') if rawg_info and rawg_info.get('stores') else []),
+            'metacritic': (rawg_info.get('metacritic') if rawg_info and rawg_info.get('metacritic') else None)
+        }
+
+        enriched.append({
+            'name': jogo_display_name, 
+            'nota': nota,
+            'comentario': comentario,
+            'onde': onde,
+            'valor': valor,
+            'rawg': rawg_dict
         })
 
-    return render_template("dashboard.html", avaliacoes=avaliacoes)
+    return render_template("dashboard.html", avaliacoes=enriched, user_id=user_id)
 
 
-#avalicao
 @app.route('/avaliar', methods=['GET', 'POST'])
 def avaliar():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
+    user_id = session['user_id']
+
+    conexao = get_db()
+    cursor = conexao.cursor()
+
     if request.method == 'POST':
-        name = request.form['name'].strip()
+        jogo = request.form['jogo'].strip()
         nota = request.form['nota']
         comentario = request.form['comentario']
         onde = request.form['onde']
         valor = request.form['valor']
+        
+        jogo_normalizado = jogo.lower()
 
-        db = get_db()
-        c = db.cursor()
+        if not jogo_normalizado:
+            flash("O nome do jogo não pode estar vazio.", "error")
+            return redirect(url_for('avaliar'))
 
-        name_norm = name.lower()
+        cursor.execute("INSERT OR IGNORE INTO jogos (nome_do_jogo) VALUES (?)", (jogo_normalizado,))
+        conexao.commit()
 
-        c.execute("INSERT OR IGNORE INTO jogos (nome_do_jogo) VALUES (?)", (name_norm,))
-        db.commit()
+        cursor.execute("SELECT id FROM jogos WHERE nome_do_jogo=?", (jogo_normalizado,))
+        jogo_id = cursor.fetchone()[0]
 
-        c.execute("SELECT id FROM jogos WHERE nome_do_jogo = ?", (name_norm,))
-        jogo_id = c.fetchone()[0]
+        cursor.execute("SELECT * FROM avaliacoes WHERE usuario_id=? AND jogo_id=?", (user_id, jogo_id))
+        if cursor.fetchone():
+            flash(f"Você já avaliou {jogo.title()}!", "error")
+            return redirect(url_for('dashboard'))
 
-        c.execute("""INSERT INTO avaliacoes 
-            (usuario_id, jogo_id, nota, comentario, onde_baixar, valor)
+        cursor.execute("""
+            INSERT INTO avaliacoes (usuario_id, jogo_id, nota, comentario, onde_baixar, valor)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (session['user_id'], jogo_id, nota, comentario, onde, valor))
+        """, (user_id, jogo_id, nota, comentario, onde, valor))
 
-        db.commit()
-        flash("Avaliação criada com sucesso!", "success")
+        conexao.commit()
+        flash("Avaliação adicionada com sucesso!", "success")
         return redirect(url_for('dashboard'))
 
     return render_template("avaliar.html")
 
 
-#editar
-@app.route('/editar/<int:avaliacao_id>', methods=['GET', 'POST'])
-def editar_avaliacao(avaliacao_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
+@app.route('/rawg_search')
+def route_rawg_search():
+    q = request.args.get('q', '').strip()
+    if not q or not RAWG_API_KEY:
+        return jsonify([])
+    results = rawg_search(q, limit=8) 
+    return jsonify(results)
 
-    db = get_db()
-    c = db.cursor()
 
-    c.execute("""
-        SELECT avaliacoes.id, jogos.nome_do_jogo, avaliacoes.nota,
-               avaliacoes.comentario, avaliacoes.onde_baixar, avaliacoes.valor
-        FROM avaliacoes
-        JOIN jogos ON jogos.id = avaliacoes.jogo_id
-        WHERE avaliacoes.id = ? AND avaliacoes.usuario_id = ?
-    """, (avaliacao_id, session['user_id']))
+@app.route('/rawg_game')
+def route_rawg_game():
+    gid = request.args.get('id')
+    if not gid or not RAWG_API_KEY:
+        return jsonify({})
+    details = rawg_details_by_id(gid)
+    return jsonify(details or {})
 
-    aval = c.fetchone()
-
-    if not aval:
-        flash("Avaliação não encontrada.", "error")
-        return redirect(url_for('dashboard'))
-
-    if request.method == 'POST':
-        nota = request.form['nota']
-        comentario = request.form['comentario']
-        onde = request.form['onde']
-        valor = request.form['valor']
-
-        c.execute("""
-            UPDATE avaliacoes
-            SET nota=?, comentario=?, onde_baixar=?, valor=?
-            WHERE id=? AND usuario_id=?
-        """, (nota, comentario, onde, valor, avaliacao_id, session['user_id']))
-
-        db.commit()
-        flash("Avaliação editada!", "success")
-        return redirect(url_for('dashboard'))
-
-    avaliacao = {
-        'id': aval[0],
-        'name': aval[1].title(),
-        'nota': aval[2],
-        'comentario': aval[3],
-        'onde': aval[4],
-        'valor': aval[5]
-    }
-    return render_template("avaliar.html", aval=avaliacao)
-
-#excluir
-@app.route('/deletar_avaliacao/<int:avaliacao_id>', methods=['POST'])
-def deletar_avaliacao(avaliacao_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-
-    db = get_db()
-    c = db.cursor()
-
-    c.execute("""
-        DELETE FROM avaliacoes
-        WHERE id = ? AND usuario_id = ?
-    """, (avaliacao_id, session['user_id']))
-
-    db.commit()
-    flash("Avaliação deletada!", "success")
-    return redirect(url_for('dashboard'))
-
-#registrar
-@app.route('/registro', methods=['GET', 'POST'])
-def registro():
-    if request.method == 'POST':
-        username = request.form['username'].lower()
-        senha = request.form['senha']
-
-        db = get_db()
-        c = db.cursor()
-
-        try:
-            c.execute("INSERT INTO usuarios (username, senha) VALUES (?, ?)", (username, senha))
-            db.commit()
-            flash("Conta criada!", "success")
-            return redirect(url_for('login'))
-        except:
-            flash("Usuário já existe!", "error")
-
-    return render_template("registro.html")
-
-#login
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username'].lower()
-        senha = request.form['senha']
-
-        db = get_db()
-        c = db.cursor()
-        c.execute("SELECT * FROM usuarios WHERE username=? AND senha=?", (username, senha))
-        user = c.fetchone()
-
-        if user:
-            session['user_id'] = user[0]
-            session['username'] = username
-            return redirect(url_for('dashboard'))
-
-        flash("Login inválido!", "error")
-
-    return render_template("login.html")
-
-#logout
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('index'))
 
 
-#Rodar o codigo
+@app.route('/registro', methods=['GET', 'POST'])
+def registro():
+    if request.method == 'POST':
+        username = request.form['username'].lower()
+        senha = request.form['senha']
+        conexao = get_db()
+        cursor = conexao.cursor()
+        try:
+            cursor.execute("INSERT INTO usuarios (username, senha) VALUES (?, ?)",
+                           (username, senha))
+            conexao.commit()
+            flash("Conta criada com sucesso!", "success")
+            return redirect(url_for('login'))
+        except sqlite3.IntegrityError:
+            flash("Usuário já existe!", "error")
+            return redirect(url_for('registro'))
+    return render_template("registro.html")
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username'].lower()
+        senha = request.form['senha']
+        conexao = get_db()
+        cursor = conexao.cursor()
+        cursor.execute("SELECT * FROM usuarios WHERE username=? AND senha=?", (username, senha))
+        user = cursor.fetchone()
+
+        if user:
+            session['user_id'] = user[0]
+            session['username'] = username
+            flash(f"Bem-vindo, {username}!", "success")
+            return redirect(url_for('dashboard'))
+
+        flash("Login inválido!", "error")
+        return redirect(url_for('login'))
+
+    return render_template("login.html")
+
 if __name__ == "__main__":
     app.run(debug=True)
