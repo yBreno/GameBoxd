@@ -5,7 +5,6 @@ O projeto é parte do curso de Ciencia da Computação da UNIVEM e foi realizado
 
 ---
 ## gameboxd.online ou gameboxd-0tzy.onrender.com
-## O branch Master é para servidor de teste.
 ---
 
 ## ✨ Funcionalidades
