@@ -52,7 +52,7 @@
             </div>
             {% else %}
                 <div class="buttons">
-                    <a href="{{ url_for('cadastro') }}" class="btn big btn-secondary">Criar Conta Agora</a>
+                    <a href="{{ url_for('cadastro') }}" class="btn big btn-secondary">Criar Conta</a>
                     <a href="{{ url_for('login') }}" class="btn big btn-tertiary">Fazer Login</a>
                 </div>
             {% endif %}
@@ -63,7 +63,7 @@
             
             <div class="welcome-card">
                 {% if username %}
-                    <h1>Bem-vindo(a), {{ username }}!</h1>
+                    <h1>Bem-vindo(a), {{ username.lower() }}!</h1>
                 {% else %}
                     <h1>Bem-vindo(a) ao GameBoxd</h1>
                 {% endif %}
