@@ -20,18 +20,21 @@ O projeto é parte do curso de Ciencia da Computação da UNIVEM e foi realizado
 ---
 
 ## 📷 Preview (Login)
-![](login.png)
-![](registro.png)
+![](fotos/login.png)
+![](fotos/registro.png)
 ---
+
 
 ## 📷 Preview (Dashboard)
-![](dashboard.png)
+![](fotos/dashboard.png)
 ---
+
 
 ## 📷 Preview (Tela de Avaliação)
-![](avaliacao.png)
+![](fotos/avaliacao.png)
 ---
 
+
 ## 📷 Preview (Tela de Avaliações Feitas)
-![](telainicial.png)
+![](fotos/telainicial.png)
 ---
