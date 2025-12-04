@@ -17,8 +17,10 @@ _RAWG_CACHE_TTL = 60 * 60
 
 
 def fix_url(url):
-    if not url:
+    if not url or not isinstance(url, str):
         return None
+    if url.startswith("//"):
+        return "https:" + url
     return url.replace("http://", "https://")
 
 
