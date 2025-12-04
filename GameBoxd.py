@@ -17,12 +17,9 @@ _RAWG_CACHE_TTL = 60 * 60
 
 
 def fix_url(url):
-    if not url or not isinstance(url, str):
+    if not url:
         return None
-    if url.startswith("//"):
-        return "https:" + url
     return url.replace("http://", "https://")
-
 
 def _cache_get(key):
     item = _rawg_cache.get(key)
@@ -34,82 +31,68 @@ def _cache_get(key):
         return None
     return val
 
-
 def _cache_set(key, val):
     _rawg_cache[key] = (time.time(), val)
-
 
 def rawg_search(query, limit=6):
     if not RAWG_API_KEY or not query:
         return []
-
     key = f"search:{query.lower()}:{limit}"
     cached = _cache_get(key)
     if cached is not None:
         return cached
-
     try:
         q = quote_plus(query)
         url = f"https://api.rawg.io/api/games?search={q}&page_size={limit}&key={RAWG_API_KEY}"
         r = requests.get(url, timeout=5)
         r.raise_for_status()
         data = r.json()
-
         results = []
         for item in (data.get('results') or []):
             results.append({
                 'id': item.get('id'),
                 'name': item.get('name'),
-                'cover': fix_url(item.get('background_image'))
+                'cover': fix_url(item.get('background_image'))   # ✔ AQUI A MUDANÇA
             })
-
         _cache_set(key, results)
         return results
-
     except Exception:
         return []
-
 
 def rawg_details_by_id(gid):
     if not RAWG_API_KEY or not gid:
         return None
-
     key = f"details:{gid}"
     cached = _cache_get(key)
     if cached is not None:
         return cached
-
     try:
-        url = f"https://api.rawg.io/api/games/{gid}?key={RAWG_API_KEY}"
-        r = requests.get(url, timeout=6)
+        details_url = f"https://api.rawg.io/api/games/{gid}?key={RAWG_API_KEY}"
+        r = requests.get(details_url, timeout=6)
         r.raise_for_status()
         details = r.json()
 
         stores = []
         for s in details.get('stores', []):
-            name = s.get('store', {}).get('name')
-            link = s.get('url')
-            if name and link:
-                stores.append({'name': name, 'url': link})
+            store_name = s.get('store', {}).get('name')
+            store_url = s.get('url')
+            if store_name and store_url:
+                stores.append({'name': store_name, 'url': store_url})
 
         out = {
-            'cover': fix_url(details.get('background_image')),
+            'cover': fix_url(details.get('background_image')),  # ✔ AQUI TAMBÉM
             'rating': details.get('rating'),
             'stores': stores,
             'metacritic': details.get('metacritic'),
             'name': details.get('name')
         }
-
         _cache_set(key, out)
         return out
-
     except Exception:
         return None
 
-
 def get_db():
     return sqlite3.connect("banco.db")
-
 
 def init_db():
     if not os.path.exists("banco.db"):
@@ -148,11 +131,9 @@ def init_db():
 
         conexao.commit()
 
-
 init_db()
 
-
-@app.route('/', methods=['GET', 'HEAD'])
+@app.route('/')
 def index():
     conexao = get_db()
     cursor = conexao.cursor()
@@ -166,70 +147,68 @@ def index():
             WHERE avaliacoes.usuario_id = ?
             ORDER BY avaliacoes.id DESC
             LIMIT 5
-        """, (session.get('user_id'),))
-
+        """, (session.get('user_id'),)) 
         raw_atividade = cursor.fetchall()
 
         for jogo_normalizado, nota in raw_atividade:
+            
             rawg_data = None
             gid = None
-
             try:
-                results = rawg_search(jogo_normalizado, limit=1)
+                results = rawg_search(jogo_normalizado, limit=1) 
                 if results:
-                    gid = results[0]['id']
+                    gid = results[0].get('id')
                     rawg_data = rawg_details_by_id(gid)
-            except:
+            except Exception:
                 rawg_data = None
 
-            jogo_display_name = rawg_data['name'] if rawg_data else jogo_normalizado.title()
-            cover_url = rawg_data['cover'] if rawg_data else url_for('static', filename='default_cover.svg')
+            jogo_display_name = rawg_data.get('name') if rawg_data else jogo_normalizado.title()
+            
+            cover_url = rawg_data.get('cover') if rawg_data else url_for('static', filename='default_cover.svg')
 
             atividade.append({
                 'name': jogo_display_name,
                 'nota': nota,
-                'cover': (cover_url),
-                'rating': rawg_data['rating'] if rawg_data else None,
+                'cover': fix_url(cover_url),   # ✔ GARANTIA EXTRA
+                'rating': rawg_data.get('rating') if rawg_data else None,
                 'id': gid
             })
 
     cursor.execute("""
-        SELECT jogos.nome_do_jogo, COUNT(avaliacoes.id) AS total, AVG(avaliacoes.nota)
+        SELECT jogos.nome_do_jogo, COUNT(avaliacoes.id) AS total, AVG(avaliacoes.nota) as media_nota
         FROM jogos
         LEFT JOIN avaliacoes ON jogos.id = avaliacoes.jogo_id
         GROUP BY jogos.id
         ORDER BY total DESC
         LIMIT 4
     """)
-
     raw_populares = cursor.fetchall()
-    populares = []
 
+    populares = []
     for jogo_normalizado, total, media_nota in raw_populares:
         rawg_data = None
         gid = None
-
         try:
-            results = rawg_search(jogo_normalizado, limit=1)
+            results = rawg_search(jogo_normalizado, limit=1) 
             if results:
-                gid = results[0]['id']
+                gid = results[0].get('id')
                 rawg_data = rawg_details_by_id(gid)
-        except:
+        except Exception:
             rawg_data = None
+            
+        jogo_display_name = rawg_data.get('name') if rawg_data else jogo_normalizado.title()
 
-        jogo_display_name = rawg_data['name'] if rawg_data else jogo_normalizado.title()
-        cover_url = rawg_data['cover'] if rawg_data else url_for('static', filename='default_cover.svg')
+        cover_url = rawg_data.get('cover') if rawg_data else url_for('static', filename='default_cover.svg')
 
         populares.append({
-            'name': jogo_display_name,
-            'total': total,
-            'cover': fix_url(cover_url),
-            'avg_rating': f"{media_nota:.1f}" if media_nota else 'N/A',
+            'name': jogo_display_name, 
+            'total': total, 
+            'cover': fix_url(cover_url),   # ✔ GARANTIA EXTRA
+            'avg_rating': f"{media_nota:.1f}" if media_nota else 'N/A', 
             'id': gid
         })
 
     return render_template("index.html", atividade=atividade, populares=populares)
-
 
 @app.route('/dashboard')
 def dashboard():
@@ -249,32 +228,31 @@ def dashboard():
     """, (user_id,))
 
     dados = cursor.fetchall()
-    enriched = []
 
+    enriched = []
     for jogo_normalizado, nota, comentario, onde, valor in dados:
         rawg_info = None
-
         try:
             results = rawg_search(jogo_normalizado, limit=1)
             if results:
-                gid = results[0]['id']
+                gid = results[0].get('id')
                 rawg_info = rawg_details_by_id(gid)
-        except:
+        except Exception:
             rawg_info = None
 
         default_cover = url_for('static', filename='default_cover.svg')
-
-        jogo_display_name = rawg_info['name'] if rawg_info else jogo_normalizado.title()
+        
+        jogo_display_name = rawg_info.get('name') if rawg_info else jogo_normalizado.title()
 
         rawg_dict = {
-            'cover': rawg_info['cover'] if rawg_info else default_cover,
-            'rating': rawg_info['rating'] if rawg_info else None,
-            'stores': rawg_info['stores'] if rawg_info else [],
-            'metacritic': rawg_info['metacritic'] if rawg_info else None
+            'cover': fix_url(rawg_info.get('cover') if rawg_info else default_cover),  
+            'rating': rawg_info.get('rating') if rawg_info else None,
+            'stores': rawg_info.get('stores') if rawg_info else [],
+            'metacritic': rawg_info.get('metacritic') if rawg_info else None
         }
 
         enriched.append({
-            'name': jogo_display_name,
+            'name': jogo_display_name, 
             'nota': nota,
             'comentario': comentario,
             'onde': onde,
@@ -291,6 +269,7 @@ def avaliar():
         return redirect(url_for('login'))
 
     user_id = session['user_id']
+
     conexao = get_db()
     cursor = conexao.cursor()
 
@@ -300,7 +279,7 @@ def avaliar():
         comentario = request.form['comentario']
         onde = request.form['onde']
         valor = request.form['valor']
-
+        
         jogo_normalizado = jogo.lower()
 
         if not jogo_normalizado:
@@ -335,7 +314,8 @@ def route_rawg_search():
     q = request.args.get('q', '').strip()
     if not q or not RAWG_API_KEY:
         return jsonify([])
-    return jsonify(rawg_search(q, limit=8))
+    results = rawg_search(q, limit=8) 
+    return jsonify(results)
 
 
 @app.route('/rawg_game')
@@ -343,8 +323,8 @@ def route_rawg_game():
     gid = request.args.get('id')
     if not gid or not RAWG_API_KEY:
         return jsonify({})
-    return jsonify(rawg_details_by_id(gid) or {})
-
+    details = rawg_details_by_id(gid)
+    return jsonify(details or {})
 
 @app.route('/logout')
 def logout():
@@ -359,16 +339,15 @@ def registro():
         senha = request.form['senha']
         conexao = get_db()
         cursor = conexao.cursor()
-
         try:
-            cursor.execute("INSERT INTO usuarios (username, senha) VALUES (?, ?)", (username, senha))
+            cursor.execute("INSERT INTO usuarios (username, senha) VALUES (?, ?)",
+                           (username, senha))
             conexao.commit()
             flash("Conta criada com sucesso!", "success")
             return redirect(url_for('login'))
         except sqlite3.IntegrityError:
             flash("Usuário já existe!", "error")
             return redirect(url_for('registro'))
-
     return render_template("registro.html")
 
 
@@ -379,7 +358,6 @@ def login():
         senha = request.form['senha']
         conexao = get_db()
         cursor = conexao.cursor()
-
         cursor.execute("SELECT * FROM usuarios WHERE username=? AND senha=?", (username, senha))
         user = cursor.fetchone()
 
@@ -393,7 +371,6 @@ def login():
         return redirect(url_for('login'))
 
     return render_template("login.html")
-
 
 if __name__ == "__main__":
     app.run(debug=True)
