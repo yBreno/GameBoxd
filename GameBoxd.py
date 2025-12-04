@@ -11,7 +11,7 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = 'abacate'
 
-RAWG_API_KEY = os.environ.get('RAWG_API_KEY')
+RAWG_API_KEY = os.environ.get('27cbf22057c4482f8a1c6e7d2021a2fe')
 _rawg_cache = {}  
 _RAWG_CACHE_TTL = 60 * 60  
 
