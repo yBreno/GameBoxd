@@ -4,6 +4,8 @@ GameBoxd é um projeto desenvolvido em **Flask + SQLITE + HTML + CSS + RAWG API*
 O projeto é parte do curso de Ciencia da Computação da UNIVEM e foi realizado em dupla sendo seus integrantes Breno e Arthur
 
 ---
+##gameboxd.online ou https://gameboxd-0tzy.onrender.com/
+---
 
 ## ✨ Funcionalidades
 
@@ -18,15 +20,18 @@ O projeto é parte do curso de Ciencia da Computação da UNIVEM e foi realizado
 ---
 
 ## 📷 Preview (Login)
-
+![](login.png)
+![](registro.png)
 ---
 
 ## 📷 Preview (Dashboard)
-
+![](dashboard.png)
 ---
 
 ## 📷 Preview (Tela de Avaliação)
-
+![](avaliacao.png)
 ---
 
 ## 📷 Preview (Tela de Avaliações Feitas)
+![](telainicial.png)
+---
