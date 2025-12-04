@@ -2,83 +2,207 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
+    <title>{{ 'Editar Avaliação' if aval else 'Avaliar Jogo' }} | GameBoxd</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-    <title>Avaliar</title>
+    
 </head>
 <body>
 
-    <header class="navbar">
-        <div class="logo logo-area">
-            <span class="icon">🕹️</span>
-            <span><a href="/" class="logo-text">GameBoxd</a></span>
-        </div> 
-        <nav class="menu">
-            <a href="/dashboard" class="btn btn-sm">Dashboard</a>
-            <a href="/logout" class="btn btn-sm">Sair</a>
-        </nav>
-    </header>
+<header class="navbar">
+    <div class="logo logo-area">
+        <span class="icon">🕹️</span>
+        <a href="{{ url_for('index') }}" class="logo-text">GameBoxd</a>
+    </div> 
+    <nav class="menu">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-sm">Dashboard</a> 
+        <a href="{{ url_for('logout') }}" class="btn btn-sm">Sair</a>
+    </nav>
+</header>
 
-    <main class="review-form-container">
-        <aside class="review-sidebar"> <div class="game-icon" id="game-icon-preview">🎮</div>
-            <div class="stats">
-                <p> <strong id="game-name-preview">Selecione um jogo</strong> </p>
-                <p id="game-rating-preview" class="rating-preview-text" style="display: none;"></p>
-            </div>
-            
-            <div class="sidebar-info">
-                <p>Preencha o campo **Nome do Jogo** para ver o preview aqui.</p>
-            </div>
-        </aside>
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="flash-messages-container">
+            {% for category, message in messages %}
+                <div class="flash-message flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
 
-        <section class="review-form"> <form action="{{ url_for('avaliar') }}" method="POST" id="avaliar-form">
-                <h1>Avaliar Jogo</h1> {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        <div class="flash-box">
-                            {% for category, message in messages %}
-                                <p class="flash-message flash-{{ category }}" role="alert">{{ message }}</p>
-                            {% endfor %}
-                        </div>
+<div class="review-form-container">
+
+    <aside class="review-sidebar">
+        <div class="game-icon">🎮</div>
+
+        <div class="stats">
+            {% if aval %}
+                <p><strong>Editando:</strong> {{ aval.name }}</p>
+                <p>Sua nota anterior: **{{ aval.nota }}**★</p>
+            {% else %}
+                <p><strong>Nova Avaliação</strong></p>
+            {% endif %}
+        </div>
+
+        <div class="sidebar-info">
+            Preencha as informações do jogo e registre sua experiência. O nome é importante para que possamos buscar a capa!
+        </div>
+    </aside>
+
+    <main class="review-form">
+
+        <h1>
+            {% if aval %}
+                Editar Avaliação de {{ aval.name }}
+            {% else %}
+                Avaliar Novo Jogo
+            {% endif %}
+        </h1>
+
+        <form method="POST">
+
+            <div class="form-group">
+                <label for="game-name">Nome do Jogo</label>
+                <input 
+                    type="text" 
+                    name="name"
+                    id="game-name" 
+                    required
+                    placeholder="Ex: Elden Ring"
+                    value="{{ aval.name if aval else '' }}"
+                    list="game-suggestions"
+                    {% if aval %} disabled {% endif %} >
+                
+                <datalist id="game-suggestions"></datalist>
+
+                {% if aval %}
+                    <input type="hidden" name="name" value="{{ aval.name }}">
+                    <p class="info-text">O nome do jogo não pode ser alterado após a criação.</p>
+                {% else %}
+                    <p class="info-text">Comece a digitar para buscar o nome oficial.</p>
+                {% endif %}
+            </div>
+
+            <div class="form-group-row">
+                <div class="form-group">
+                    <label for="game-nota">Sua Nota (0.0 a 10.0)</label>
+                    <input
+                        type="number"
+                        name="nota"
+                        id="game-nota"
+                        min="0"
+                        max="10"
+                        step="0.5"
+                        required
+                        value="{{ aval.nota if aval else '' }}"
+                    >
+                    <p class="info-text">Use 0.5 para notas intermediárias.</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="game-valor">Valor Pago</label>
+                    <input
+                        type="text"
+                        name="valor"
+                        id="game-valor"
+                        placeholder="Ex: R$ 199.99, Game Pass, Gratuito"
+                        value="{{ aval.valor if aval else '' }}"
+                    >
+                    <p class="info-text">Opcional.</p>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="game-onde">Onde Comprou/Jogou</label>
+                <input
+                    type="text"
+                    name="onde"
+                    id="game-onde"
+                    placeholder="Ex: Steam, PlayStation Store, Pirata (se for o caso)"
+                    value="{{ aval.onde if aval else '' }}"
+                >
+                <p class="info-text">Onde você obteve o jogo.</p>
+            </div>
+
+            <div class="form-group">
+                <label for="game-comentario">Comentário</label>
+                <textarea 
+                    name="comentario"
+                    id="game-comentario"
+                    rows="5"
+                    placeholder="Diga o que achou do jogo, seus pontos altos e baixos, etc."
+                >{{ aval.comentario if aval else '' }}</textarea>
+                <p class="info-text">Sua opinião completa.</p>
+            </div>
+
+
+            <div class="actions">
+
+                <button type="submit" class="btn submit-btn btn-primary">
+                    {% if aval %}
+                        💾 Salvar Alterações
+                    {% else %}
+                        Salvar Avaliação
                     {% endif %}
-                {% endwith %}
+                </button>
 
-                <div class="form-group">
-                    <label for="jogo-input">Nome do Jogo</label> 
-                        <div class="autocomplete-wrap"> 
-                            <input type="text" name="jogo" id="jogo-input" autocomplete="off" required placeholder="Ex: Elden Ring">
-                            <input type="hidden" name="rawg_id" id="rawg-id" value="">
-                        <div id="suggestions" class="suggestions"></div>
-                    </div>
-                </div>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary cancel-btn">
+                    Cancelar
+                </a>
 
-                <div class="form-group">
-                    <label for="nota">Sua Nota (0-10)</label>
-                        <input type="number" id="nota" name="nota" step="0.1" min="0" max="10" required placeholder="0 a 10">
-                </div>
+            </div>
 
-                <div class="form-group">
-                    <label for="comentario">Comentário</label> 
-                    <textarea id="comentario" name="comentario" rows="4" placeholder="O que você achou do jogo?"></textarea>
-                </div>
+        </form>
 
-                <div class="form-group">
-                    <label for="onde">Onde Você Baixou</label> 
-                    <input type="text" id="onde" name="onde" placeholder="Steam, Epic Games, etc">
-                </div>
-
-                <div class="form-group">
-                    <label for="valor">Valor</label> 
-                    <input type="text" id="valor" name="valor" placeholder="Ex: R$ 199,90">
-                </div>
-
-                <div class="actions">
-                    <button type="submit" class="btn btn-primary submit-btn">Salvar Avaliação</button>
-                    <a href="/dashboard" class="btn btn-secondary cancel-btn">Cancelar</a>
-                </div>
-            </form>
-        </section>
     </main>
+</div>
 
+{% if not aval %}
+<script>
+    const nameInput = document.getElementById('game-name');
+    const dataList = document.getElementById('game-suggestions');
+    let searchTimeout;
+
+    // Busca sugestões na API
+    const fetchSuggestions = (query) => {
+        // Verifica se a query tem pelo menos 3 caracteres
+        if (query.length < 3) {
+            dataList.innerHTML = ''; // Limpa as sugestões se for muito curto
+            return;
+        }
+
+        // Usa o endpoint Flask que se comunica com a RAWG
+        const url = `/api/search_game?q=${encodeURIComponent(query)}`;
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                dataList.innerHTML = ''; // Limpa as sugestões antigas
+                
+                data.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.name;
+                    dataList.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Erro ao buscar sugestões da RAWG:', error);
+            });
+    };
+
+    // Evento de digitação com Debounce
+    nameInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        clearTimeout(searchTimeout);
+        
+        // Espera 300ms após a última digitação (debounce)
+        searchTimeout = setTimeout(() => {
+            fetchSuggestions(query);
+        }, 300);
+    });
+</script>
+{% endif %}
 </body>
 </html>
