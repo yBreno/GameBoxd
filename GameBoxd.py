@@ -188,7 +188,7 @@ def index():
             atividade.append({
                 'name': jogo_display_name,
                 'nota': nota,
-                'cover': fix_url(cover_url),
+                'cover': (cover_url),
                 'rating': rawg_data['rating'] if rawg_data else None,
                 'id': gid
             })
@@ -267,7 +267,7 @@ def dashboard():
         jogo_display_name = rawg_info['name'] if rawg_info else jogo_normalizado.title()
 
         rawg_dict = {
-            'cover': fix_url(rawg_info['cover'] if rawg_info else default_cover),
+            'cover': rawg_info['cover'] if rawg_info else default_cover,
             'rating': rawg_info['rating'] if rawg_info else None,
             'stores': rawg_info['stores'] if rawg_info else [],
             'metacritic': rawg_info['metacritic'] if rawg_info else None
