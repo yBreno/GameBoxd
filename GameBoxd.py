@@ -15,6 +15,21 @@ RAWG_API_KEY = os.environ.get('RAWG_API_KEY')
 _rawg_cache = {}  
 _RAWG_CACHE_TTL = 60 * 60  
 
+def fix_url(url):
+    if not url:
+        return None
+
+    # Se já vier com http/https
+    if url.startswith("http://") or url.startswith("https://"):
+        return url.replace("http://", "https://")
+
+    # Se vier só o caminho /media
+    if url.startswith("/media"):
+        return "https://media.rawg.io" + url
+
+    return url
+
+
 def _cache_get(key):
     item = _rawg_cache.get(key)
     if not item:
