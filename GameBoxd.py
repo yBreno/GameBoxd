@@ -11,7 +11,7 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = 'abacate'
 
-RAWG_API_KEY = os.environ.get('27cbf22057c4482f8a1c6e7d2021a2fe')
+RAWG_API_KEY = os.environ.get('RAWG_API_KEY')
 _rawg_cache = {}  
 _RAWG_CACHE_TTL = 60 * 60  
 
@@ -150,7 +150,7 @@ def init_db():
 init_db()
 
 
-@app.route('/')
+@app.route('/', methods=['GET', 'HEAD'])
 def index():
     conexao = get_db()
     cursor = conexao.cursor()
