@@ -32,7 +32,6 @@
         </div>
         
         <div class="sidebar-stats">
-            
             <div class="stat-item">
                 <span class="stat-label">Total de Avaliações</span>
                 <span class="stat-value">{{ avaliacoes|length }}</span>
@@ -42,7 +41,6 @@
                 <span class="stat-label">Nota Média</span>
                 <span class="stat-value">
                     {% set notas_validas = avaliacoes|map(attribute='nota')|select('>', 0)|list %}
-                    
                     {% if notas_validas %}
                         {% set media = notas_validas|sum / notas_validas|length %}
                         {{ "%.1f"|format(media) }}
@@ -89,12 +87,21 @@
                 <div class="review-card">
 
                     <div class="card-media">
+
                         {% set default_cover = url_for('static', filename='default_cover.svg') %}
                         {% set cover_url = aval.rawg.cover if aval.rawg and aval.rawg.cover else default_cover %}
-                        <img class="cover-img" src="{{ cover_url }}" alt="Capa do Jogo: {{ aval.name }}" loading="lazy" onerror="this.onerror=null; this.src='{{ default_cover }}';">   
+
+                        <img class="cover-img"
+                             src="{{ cover_url }}"
+                             alt="Capa do Jogo: {{ aval.name }}"
+                             loading="lazy"
+                             onerror="this.onerror=null; this.src='{{ default_cover }}';">
+
                         {% if aval.rawg and aval.rawg.rating is not none %}
                         <div class="rating-badge">
-                            <span class="rating-num">RAWG: {{ "%.1f"|format(aval.rawg.rating) if aval.rawg.rating is number else 'N/A' }}</span>
+                            <span class="rating-num">
+                                RAWG: {{ "%.1f"|format(aval.rawg.rating) if aval.rawg.rating is number else 'N/A' }}
+                            </span>
                         </div>
                         {% endif %}
                     </div>
@@ -107,26 +114,23 @@
 
                     {% if aval.comentario %}
                         <p class="card-coment" title="{{ aval.comentario }}">
-                            "{{ aval.comentario|truncate(80, True, '...') }}" 
+                            "{{ aval.comentario|truncate(80, True, '...') }}"
                         </p>
                     {% endif %}
 
                     <div class="card-meta">
                         {% if aval.valor %}
-                            <span class="card-valor">
-                                💰 <strong>Preço:</strong> {{ aval.valor }}
-                            </span>
+                            <span class="card-valor">💰 <strong>Preço:</strong> {{ aval.valor }}</span>
                         {% endif %}
                         {% if aval.onde %}
-                            <span class="card-onde">
-                                🌐 <strong>Onde Joguei:</strong> {{ aval.onde }}
-                            </span>
+                            <span class="card-onde">🌐 <strong>Onde Joguei:</strong> {{ aval.onde }}</span>
                         {% endif %}
                     </div>
 
                     {% if aval.rawg and aval.rawg.stores %}
-                        <div class="store-buttons" aria-label="Links para lojas do jogo">
-                            {% for s in aval.rawg.stores[:3] %} <a class="store-btn" href="{{ s.url }}" target="_blank" rel="noopener noreferrer" title="Comprar/Ver em {{ s.name }}">
+                        <div class="store-buttons">
+                            {% for s in aval.rawg.stores[:3] %}
+                                <a class="store-btn" href="{{ s.url }}" target="_blank" rel="noopener noreferrer">
                                     {{ s.name }}
                                 </a>
                             {% endfor %}
@@ -134,17 +138,16 @@
                     {% endif %}
 
                     <div class="card-actions">
-
-                        <a href="{{ url_for('editar_avaliacao', avaliacao_id=aval.id) }}"
-                           class="btn-edit btn-secondary">
+                        <a href="{{ url_for('editar_avaliacao', avaliacao_id=aval.id) }}" class="btn-edit btn-secondary">
                             ✏️ Editar
                         </a>
-                        <form action="{{ url_for('deletar_avaliacao', avaliacao_id=aval.id) }}" method="POST" class="delete-form" onsubmit="return confirm('Tem certeza que deseja excluir a avaliação de {{ aval.name }}?');">
-                            <button type="submit" class="btn-delete btn-danger">
-                                🗑️ Excluir
-                            </button>
+
+                        <form action="{{ url_for('deletar_avaliacao', avaliacao_id=aval.id) }}" method="POST" class="delete-form"
+                              onsubmit="return confirm('Tem certeza que deseja excluir a avaliação de {{ aval.name }}?');">
+                            <button type="submit" class="btn-delete btn-danger">🗑️ Excluir</button>
                         </form>
                     </div>
+
                 </div>
                 {% endfor %}
             </div>
