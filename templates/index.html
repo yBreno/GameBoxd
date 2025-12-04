@@ -19,7 +19,6 @@
                 <a href="{{ url_for('logout') }}" class="btn btn-sm">Sair</a>
             {% else %}
                 <a href="{{ url_for('login') }}" class="btn btn-sm">Login</a>
-                <a href="{{ url_for('cadastro') }}" class="btn btn-sm">Criar Conta</a> 
             {% endif %}
         </nav>
     </header>
@@ -51,10 +50,6 @@
                 <a href="{{ url_for('avaliar') }}" class="btn big add-btn btn-primary">🎮 Avaliar Novo Jogo</a>
             </div>
             {% else %}
-                <div class="buttons">
-                    <a href="{{ url_for('cadastro') }}" class="btn big btn-secondary">Criar Conta</a>
-                    <a href="{{ url_for('login') }}" class="btn big btn-tertiary">Fazer Login</a>
-                </div>
             {% endif %}
 
         </aside>
@@ -102,7 +97,6 @@
                 {% else %}
                     <div class="welcome-incentive-card">
                         <p>🎉 Parece que você é novo por aqui! Comece a acompanhar sua jornada gamer avaliando seu primeiro jogo.</p>
-                        <a href="{{ url_for('avaliar') }}" class="btn big btn-primary">Avaliar Agora</a>
                     </div>
                 {% endif %}
             </section>
