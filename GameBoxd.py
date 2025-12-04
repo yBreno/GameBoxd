@@ -200,16 +200,16 @@ def get_populares(limit=8):
     DEFAULT_COVER = "https://via.placeholder.com/420x220?text=Sem+Capa"
 
     for p in dados:
-        nome = p["nome_do_jogo"]
-        cover = DEFAULT_COVER
-        try:
-            r = rawg_search(nome, 1)
-            if r and r[0]["id"]:
-                info = rawg_details_by_id(r[0]["id"]) or {}
-                if info.get("cover"):
-                    cover = info["cover"]
-        except:
-            pass
+    nome = p["nome_do_jogo"]
+    cover = DEFAULT_COVER
+    try:
+        r = rawg_search(nome, 1)
+        if r and r[0]["id"]:
+            info = rawg_details_by_id(r[0]["id"]) or {}
+            if info.get("cover"):
+                cover = fix_url(info["cover"])
+    except:
+        pass
 
         populares.append({
             "name": nome.title(),
@@ -256,13 +256,14 @@ def index():
             rating = None
 
             try:
-                r = rawg_search(nome, 1)
-                if r and r[0]["id"]:
-                    info = rawg_details_by_id(r[0]["id"]) or {}
-                    cover = info.get("cover") or cover
-                    rating = info.get("rating")
-            except:
-                pass
+    r = rawg_search(nome, 1)
+    if r and r[0]["id"]:
+        info = rawg_details_by_id(r[0]["id"]) or {}
+        if info.get("cover"):
+            cover = fix_url(info["cover"])
+        rating = info.get("rating")
+except:
+    pass
 
             atividade.append({
                 "id": a["id"],
@@ -359,12 +360,13 @@ def dashboard():
         info = {}
 
         try:
-            r = rawg_search(nome, 1)
-            if r and r[0]["id"]:
-                info = rawg_details_by_id(r[0]["id"]) or {}
-                cover = info.get("cover") or cover
-        except:
-            pass
+    r = rawg_search(nome, 1)
+    if r and r[0]["id"]:
+        info = rawg_details_by_id(r[0]["id"]) or {}
+        if info.get("cover"):
+            cover = fix_url(info["cover"])
+except:
+    pass
 
         avaliacoes.append({
             "id": a["id"],
