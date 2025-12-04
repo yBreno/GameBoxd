@@ -10,7 +10,8 @@
 <body>
 
     <header class="navbar">
-        <div class="logo logo-area"> <span class="icon">🕹️</span>
+        <div class="logo logo-area"> 
+            <span class="icon">🕹️</span>
             <a href="/" class="logo-text">GameBoxd</a>
         </div> 
         <nav class="menu">
@@ -19,7 +20,9 @@
         </nav>
     </header>
 
-    <div class="dashboard-container"> <aside class="dashboard-sidebar">
+    <div class="dashboard-container">
+
+        <aside class="dashboard-sidebar">
             <div class="sidebar-user">
                 <div class="user-avatar" aria-label="Avatar do usuário">
                     <img src="{{ url_for('static', filename='Icon Menine.png') }}" alt="Avatar" class="avatar-img">
@@ -60,63 +63,74 @@
 
             {% if not avaliacoes %}
                 <p class="vazio">
-                    Você ainda não avaliou nenhum jogo. Comece <a href="/avaliar" style="color: var(--accent); font-weight: 600;">aqui</a>.
+                    Você ainda não avaliou nenhum jogo. Comece 
+                    <a href="/avaliar" style="color: var(--accent); font-weight: 600;">aqui</a>.
                 </p>
             {% else %}
+
                 <div class="cards-grid">
 
                     {% for aval in avaliacoes %}
-                        <a href=" " class="review-card"> 
+                    <a href="#" class="review-card"> 
 
-                            <div class="card-media">
-                                {% set cover_url = aval.rawg.cover if aval.rawg and aval.rawg.cover else url_for('static', filename='default_cover.svg') %}
-                                <img class="cover-img" src="{{ cover_url }}" alt="Capa do Jogo: {{ aval.name }}" onerror="this.onerror=null; this.src='{{ url_for('static', filename='default_cover.svg') }}';">
-                                
+                        <div class="card-media">
 
-                                {% if aval.rawg and aval.rawg.rating %}
-                                <div class="rating-badge">
-                                    <span class="rating-num">RAWG: {{ aval.rawg.rating }}</span>
-                                </div>
-                                {% endif %}
+                            {# IMAGEM DO RAWG CORRIGIDA #}
+                            {% set cover_url = aval.rawg['cover'] if aval.rawg and aval.rawg['cover'] else url_for('static', filename='default_cover.svg') %}
+                            
+                            <img class="cover-img"
+                                 src="{{ cover_url }}"
+                                 alt="Capa do Jogo: {{ aval.name }}"
+                                 onerror="this.onerror=null; this.src='{{ url_for('static', filename='default_cover.svg') }}';">
+
+                            {# RATING DO RAWG CORRIGIDO #}
+                            {% if aval.rawg and aval.rawg['rating'] %}
+                            <div class="rating-badge">
+                                <span class="rating-num">RAWG: {{ aval.rawg['rating'] }}</span>
                             </div>
-
-                            <h3 class="card-title">{{ aval.name }}</h3>
-
-                            <p class="card-nota rate">
-                                Sua Nota: {{ aval.nota }}★
-                            </p>
-
-                            {% if aval.comentario %}
-                                <p class="card-coment">
-                                    "{{ aval.comentario|truncate(80, True) }}"
-                                </p>
                             {% endif %}
+                        </div>
 
-                            <div class="card-meta">
-                                {% if aval.valor %}
-                                    <span class="card-valor">
-                                        <strong>Valor:</strong> {{ aval.valor }}
-                                    </span>
-                                {% endif %}
-                                {% if aval.onde %}
-                                    <span class="card-onde">
-                                        <strong>Onde:</strong> {{ aval.onde }}
-                                    </span>
-                                {% endif %}
-                            </div>
+                        <h3 class="card-title">{{ aval.name }}</h3>
 
-                            {% if aval.rawg and aval.rawg.stores %}
-                                <div class="store-buttons">
-                                    {% for s in aval.rawg.stores[:3] %}
-                                        <a class="store-btn" href="{{ s.url }}" target="_blank" rel="noopener noreferrer">
-                                            {{ s.name }}
-                                        </a>
-                                    {% endfor %}
-                                </div>
+                        <p class="card-nota rate">
+                            Sua Nota: {{ aval.nota }}★
+                        </p>
+
+                        {% if aval.comentario %}
+                        <p class="card-coment">
+                            "{{ aval.comentario|truncate(80, True) }}"
+                        </p>
+                        {% endif %}
+
+                        <div class="card-meta">
+                            {% if aval.valor %}
+                                <span class="card-valor">
+                                    <strong>Valor:</strong> {{ aval.valor }}
+                                </span>
                             {% endif %}
-                        </a>
-                     {% endfor %}
+                            {% if aval.onde %}
+                                <span class="card-onde">
+                                    <strong>Onde:</strong> {{ aval.onde }}
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        {# LOJAS CORRIGIDAS #}
+                        {% if aval.rawg and aval.rawg['stores'] %}
+                        <div class="store-buttons">
+                            {% for s in aval.rawg['stores'][:3] %}
+                                <a class="store-btn" href="{{ s.url }}" target="_blank" rel="noopener noreferrer">
+                                    {{ s.name }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                    </a>
+                    {% endfor %}
                 </div>
+
             {% endif %}
         </main>
     </div>
