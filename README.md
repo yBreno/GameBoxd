@@ -18,6 +18,10 @@ O projeto é parte do curso de Ciencia da Computação da UNIVEM e foi realizado
 - 💾 Banco de dados local em SQLite  
 
 ---
+## 📷 Preview (Tela de Avaliações Feitas)
+![](fotos/telainicial.png)
+---
+
 
 ## 📷 Preview (Login)
 ![](fotos/login.png)
@@ -35,6 +39,3 @@ O projeto é parte do curso de Ciencia da Computação da UNIVEM e foi realizado
 ---
 
 
-## 📷 Preview (Tela de Avaliações Feitas)
-![](fotos/telainicial.png)
----
