@@ -69,7 +69,7 @@
                         <a href=" " class="review-card"> 
 
                             <div class="card-media">
-                               {% set cover_url = aval.rawg.background_image if aval.rawg and aval.rawg.background_image else url_for('static', filename='default_cover.svg') %}
+                               {% set cover_url = aval.rawg.cover if aval.rawg and aval.rawg.cover else url_for('static', filename='default_cover.svg') %}
                                 <img class="cover-img" src="{{ cover_url }}" alt="Capa do Jogo: {{ aval.name }}" 
                                      onerror="this.onerror=null; this.src='{{ url_for('static', filename='default_cover.svg') }}';">
                                 
@@ -124,3 +124,4 @@
 </body>
 
 </html>
+
