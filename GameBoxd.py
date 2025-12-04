@@ -19,11 +19,11 @@ def fix_url(url):
     if not url:
         return None
 
-    # Se já vier com http/https
+    
     if url.startswith("http://") or url.startswith("https://"):
         return url.replace("http://", "https://")
 
-    # Se vier só o caminho /media
+    
     if url.startswith("/media"):
         return "https://media.rawg.io" + url
 
@@ -60,11 +60,11 @@ def rawg_search(query, limit=6):
         data = r.json()
         results = []
         for item in (data.get('results') or []):
-            results.append({
-                'id': item.get('id'),
-                'name': item.get('name'),
-                'cover': item.get('background_image')
-            })
+               results.append({
+    'id': item.get('id'),
+    'name': item.get('name'),
+    'cover': fix_url(item.get('background_image'))
+        })
         _cache_set(key, results)
         return results
     except Exception:
@@ -92,12 +92,12 @@ def rawg_details_by_id(gid):
             if store_name and store_url:
                 stores.append({'name': store_name, 'url': store_url})
         out = {
-            'cover': details.get('background_image'),
-            'rating': details.get('rating'),
-            'stores': stores,
-            'metacritic': details.get('metacritic'),
-            'name': details.get('name')
-        }
+    'cover': fix_url(details.get('background_image')),
+    'rating': details.get('rating'),
+    'stores': stores,
+    'metacritic': details.get('metacritic'),
+    'name': details.get('name')
+}
         _cache_set(key, out)
         return out
     except Exception:
