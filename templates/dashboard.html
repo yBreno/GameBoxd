@@ -30,13 +30,13 @@
             <h2>{{ username }}</h2>
             <p>Avaliador de Jogos</p>
         </div>
-        
+
         <div class="sidebar-stats">
             <div class="stat-item">
                 <span class="stat-label">Total de Avaliações</span>
                 <span class="stat-value">{{ avaliacoes|length }}</span>
             </div>
-            
+
             <div class="stat-item">
                 <span class="stat-label">Nota Média</span>
                 <span class="stat-value">
@@ -67,7 +67,7 @@
                 </div>
             {% endif %}
         {% endwith %}
-        
+
         <div class="dashboard-header">
             <h1 class="titulo-pagina">Sua Lista de Avaliações</h1>
         </div>
@@ -89,7 +89,7 @@
                     <div class="card-media">
 
                         {% set default_cover = url_for('static', filename='default_cover.svg') %}
-                        {% set cover_url = aval.rawg.cover if aval.rawg and aval.rawg.cover else default_cover %}
+                        {% set cover_url = aval.cover if aval.cover else default_cover %}
 
                         <img class="cover-img"
                              src="{{ cover_url }}"
@@ -97,10 +97,10 @@
                              loading="lazy"
                              onerror="this.onerror=null; this.src='{{ default_cover }}';">
 
-                        {% if aval.rawg and aval.rawg.rating is not none %}
+                        {% if aval.rating is not none %}
                         <div class="rating-badge">
                             <span class="rating-num">
-                                RAWG: {{ "%.1f"|format(aval.rawg.rating) if aval.rawg.rating is number else 'N/A' }}
+                                RAWG: {{ "%.1f"|format(aval.rating) }}
                             </span>
                         </div>
                         {% endif %}
@@ -127,15 +127,7 @@
                         {% endif %}
                     </div>
 
-                    {% if aval.rawg and aval.rawg.stores %}
-                        <div class="store-buttons">
-                            {% for s in aval.rawg.stores[:3] %}
-                                <a class="store-btn" href="{{ s.url }}" target="_blank" rel="noopener noreferrer">
-                                    {{ s.name }}
-                                </a>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                    {# stores removidos porque aval.rawg não existe #}
 
                     <div class="card-actions">
                         <a href="{{ url_for('editar_avaliacao', avaliacao_id=aval.id) }}" class="btn-edit btn-secondary">
